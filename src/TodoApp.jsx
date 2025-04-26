@@ -7,16 +7,17 @@ const TodoApp = () => {
   const [description, setDescription] = useState("");
   const [editingIndex, setEditingIndex] = useState(null);
   const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const dispatch = useDispatch();
   const todos = useSelector((state) => state.todos);
 
-  // Save to localStorage
   useEffect(() => {
     localStorage.setItem("todos", JSON.stringify(todos));
   }, [todos]);
 
-  // Load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("todos");
     if (saved) {
@@ -26,7 +27,7 @@ const TodoApp = () => {
 
   const handleAddOrEdit = () => {
     if (title.trim() === "" || description.trim() === "") {
-      alert("Please fill both fields!");
+      alert("Please enter both title and description.");
       return;
     }
     if (editingIndex !== null) {
@@ -43,16 +44,18 @@ const TodoApp = () => {
     }
     setTitle("");
     setDescription("");
+    setShowModal(false);
   };
 
   const handleEdit = (index) => {
     setEditingIndex(index);
     setTitle(todos[index].title);
     setDescription(todos[index].description);
+    setShowModal(true);
   };
 
   const handleDelete = (index) => {
-    if (confirm("Are you sure to delete?")) {
+    if (window.confirm("Are you sure you want to delete this todo?")) {
       dispatch({ type: "DELETE_TODO", payload: index });
     }
   };
@@ -61,56 +64,55 @@ const TodoApp = () => {
     dispatch({ type: "TOGGLE_COMPLETE", payload: index });
   };
 
-  const filteredTodos = todos.filter((todo) => {
-    if (filter === "COMPLETED") return todo.completed;
-    if (filter === "PENDING") return !todo.completed;
-    return true;
-  });
+  const filteredTodos = todos
+    .filter((todo) => {
+      if (filter === "COMPLETED") return todo.completed;
+      if (filter === "PENDING") return !todo.completed;
+      return true;
+    })
+    .filter((todo) =>
+      todo.title.toLowerCase().includes(search.toLowerCase())
+    );
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-8 bg-gradient-to-br from-indigo-200 via-pink-200 to-yellow-100">
-      <motion.h1
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-5xl font-extrabold text-purple-700 mb-10"
-      >
-        🌟 My Todo App
-      </motion.h1>
+    <div className={`${darkMode ? "bg-gray-900 text-white" : "bg-gradient-to-tr from-pink-200 to-blue-300 text-black"} min-h-screen p-6`}>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-4xl font-extrabold">📝 My Todos</h1>
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          className="bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded"
+        >
+          {darkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
+        </button>
+      </div>
 
-      {/* Input Form */}
-      <div className="flex flex-col md:flex-row gap-4 w-full max-w-2xl mb-8 backdrop-blur-lg bg-white/30 p-6 rounded-2xl shadow-xl">
+      {/* Search and Add */}
+      <div className="flex flex-col md:flex-row gap-4 w-full max-w-2xl mb-8 mx-auto">
         <input
-          type="text"
-          placeholder="Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
-        />
-        <input
-          type="text"
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="border p-3 rounded flex-1 focus:outline-none"
+          placeholder="Search todos..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
         <button
-          onClick={handleAddOrEdit}
-          className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-lg hover:scale-105 transition transform duration-200"
+          onClick={() => setShowModal(true)}
+          className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded shadow-md"
         >
-          {editingIndex !== null ? "Update" : "Add"}
+          ➕ Add Todo
         </button>
       </div>
 
       {/* Filter Buttons */}
-      <div className="flex gap-6 mb-10">
+      <div className="flex gap-4 mb-8 justify-center">
         {["ALL", "COMPLETED", "PENDING"].map((type) => (
           <button
             key={type}
             onClick={() => setFilter(type)}
-            className={`px-6 py-2 rounded-full text-lg font-semibold transition-all ${
+            className={`px-4 py-2 rounded ${
               filter === type
-                ? "bg-purple-600 text-white shadow-md"
-                : "bg-white text-purple-600 border border-purple-400"
+                ? "bg-purple-600 text-white"
+                : "bg-white text-purple-600"
             }`}
           >
             {type}
@@ -118,29 +120,26 @@ const TodoApp = () => {
         ))}
       </div>
 
-      {/* Todo Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl">
+      {/* Todo List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
         <AnimatePresence>
           {filteredTodos.length === 0 ? (
             <motion.div
+              className="col-span-2 text-center text-gray-500 text-xl"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="col-span-2 text-gray-600 text-xl text-center"
             >
-              No Todos Yet 📋
+              No todos found. 🎈
             </motion.div>
           ) : (
             filteredTodos.map((todo, idx) => (
               <motion.div
                 key={idx}
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3 }}
-                className={`p-6 rounded-3xl shadow-2xl relative ${
-                  todo.completed
-                    ? "bg-green-200"
-                    : "bg-white/70 backdrop-blur-md"
+                exit={{ opacity: 0 }}
+                className={`p-6 rounded-lg shadow-xl relative ${
+                  todo.completed ? "bg-green-200" : "bg-white"
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -148,21 +147,21 @@ const TodoApp = () => {
                     type="checkbox"
                     checked={todo.completed}
                     onChange={() => handleToggleComplete(idx)}
-                    className="w-6 h-6 accent-purple-600 mt-1"
+                    className="w-5 h-5 mt-1"
                   />
                   <div>
                     <h2
                       className={`text-2xl font-bold ${
                         todo.completed
                           ? "line-through text-gray-500"
-                          : "text-purple-800"
+                          : "text-purple-700"
                       }`}
                     >
                       {todo.title}
                     </h2>
                     <p
-                      className={`mt-2 text-gray-600 ${
-                        todo.completed ? "line-through" : ""
+                      className={`mt-2 ${
+                        todo.completed ? "line-through" : "text-gray-600"
                       }`}
                     >
                       {todo.description}
@@ -170,17 +169,16 @@ const TodoApp = () => {
                   </div>
                 </div>
 
-                {/* Edit/Delete Buttons */}
                 <div className="flex gap-3 absolute top-4 right-4">
                   <button
                     onClick={() => handleEdit(idx)}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg transition-all"
+                    className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(idx)}
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all"
+                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
                   >
                     Delete
                   </button>
@@ -190,6 +188,45 @@ const TodoApp = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Modal for Adding/Editing */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md"
+          >
+            <h2 className="text-2xl font-bold mb-6">{editingIndex !== null ? "Edit Todo" : "Add Todo"}</h2>
+            <input
+              className="border p-3 rounded mb-4 w-full"
+              placeholder="Enter Title..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <input
+              className="border p-3 rounded mb-6 w-full"
+              placeholder="Enter Description..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setShowModal(false)}
+                className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddOrEdit}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
+              >
+                {editingIndex !== null ? "Update" : "Add"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
